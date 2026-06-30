@@ -1,0 +1,48 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: presta_mysql
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secure_pass
+      MYSQL_DATABASE: prestashop_pl
+      MYSQL_USER: presta_dev
+      MYSQL_PASSWORD: dev_secure_pass
+    volumes:
+      - db_market_data:/var/lib/mysql
+    ports:
+      - "3307:3306"  # <--- ИЗМЕНИЛИ ЗДЕСЬ С 3306 НА 3307
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u$$MYSQL_USER", "-p$$MYSQL_PASSWORD" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+
+  prestashop:
+    image: prestashop/prestashop:8
+    container_name: presta_core
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DB_SERVER=db
+      - DB_NAME=prestashop_pl
+      - DB_USER=presta_dev
+      - DB_PASSWD=dev_secure_pass
+      - PS_INSTALL_AUTO=1
+      - PS_DOMAIN=localhost
+      - PS_LANGUAGE=pl
+      - PS_COUNTRY=pl
+    volumes:
+      - ps_market_data:/var/www/html
+      # Мапим папку модуля из Windows прямо внутрь контейнера PrestaShop:
+      - ./inpostpaczka:/var/www/html/modules/inpostpaczka
+
+volumes:
+  db_market_data:
+  ps_market_data:
